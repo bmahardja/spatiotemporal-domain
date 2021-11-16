@@ -9,7 +9,7 @@ data_deltasmelt <-LTMRdata::fish(sources=c("Baystudy", "Suisun", "FMWT", "SKT", 
 
 data_deltasmelt$Count<-as.integer(data_deltasmelt$Count)
 
-data_deltasmelt_adult<-data_deltasmelt %>% filter(year(Date)>=1994,Length>=55) %>% mutate(broodyear=ifelse(month(Date)>=5,year(Date),year(Date)-1))
+data_deltasmelt_adult<-data_deltasmelt %>% filter(year(Date)>=1994,Length>=55) %>% mutate(broodyear=ifelse(month(Date)>=6,year(Date),year(Date)-1))
 
 data_deltasmelt_adult<-data_deltasmelt_adult[rep(1:nrow(data_deltasmelt_adult), data_deltasmelt_adult$Count),]
 data_deltasmelt_adult$Count<-1
