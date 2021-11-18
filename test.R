@@ -2,6 +2,7 @@ library(LTMRdata)
 library(tidyverse)
 library(lubridate)
 library(ggmap)
+#devtools::install_github("sbashevkin/LTMRdata")
 
 
 data_deltasmelt <-LTMRdata::fish(sources=c("Baystudy", "Suisun", "FMWT", "SKT", "DJFMP", "EDSM", "TMM", "SLS","STN"),species="Hypomesus transpacificus", size_cutoff=NULL,remove_unknown_lengths=TRUE) %>%
@@ -31,3 +32,15 @@ data_deltasmelt_sum2 <- data_deltasmelt_sum[, col_order]
 data_deltasmelt_sum2 <- left_join(data_deltasmelt_sum2,data_deltasmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
 
 write.csv(data_deltasmelt_sum2,file = "ExampleDeltaSmelt.csv",row.names = FALSE)
+
+
+#Longfin Smelt
+#Larvae (<20mm FL)
+#Juvenile (20-96mm FL)
+#Adult (>96mm FL)
+#We typically use the size ranges specified for ESA reporting, which match what Lori described for Delta Smelt. 
+#CDFW
+#For Longfin Smelt, our size ranges are 
+#larvae: <20 mm, 
+#juvenile: 20-84 mm, 
+#and adult: >84 mm.

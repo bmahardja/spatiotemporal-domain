@@ -1,0 +1,97 @@
+---
+title: "Delta Smelt Occurrence by Life Stage"
+author: "Brian Mahardja"
+date: "11/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#devtools::install_github("sbashevkin/LTMRdata")
+
+library(LTMRdata)
+library(tidyverse)
+library(lubridate)
+```
+
+## Load and process Delta Smelt data
+
+Grab Delta Smelt data from the integrated fish dataset (LTMRdata package by Sam Bashevkin et al.) and produce one fish data per row. I will exclude fish with no length measurement. Note that unmeasured fish that were collected alongside measured fish were converted to have fish length per LTMRdata documentation. I converted count to integer however, since the process that Sam implemented created decimal points for counts.
+
+Surveys included in this calculation:
+
+1. San Francisco Bay Study
+
+2. Suisun Marsh Study
+
+3. Fall Midwater Trawl
+
+4. Spring Kodiak Trawl
+
+5. Delta Juvenile Fish Monitoring Program
+
+6. Enhanced Delta Smelt Monitoring
+
+7. 20-mm Survey
+
+8. Smelt Larval Survey
+
+9. Summer Townet Survey
+
+```{r data, echo=TRUE, message=FALSE, warning=FALSE}
+
+#Load data
+data_deltasmelt <-LTMRdata::fish(sources=c("Baystudy", "Suisun", "FMWT", "SKT", "DJFMP", "EDSM", "TMM", "SLS","STN"),species="Hypomesus transpacificus", size_cutoff=NULL,remove_unknown_lengths=TRUE) %>%
+  filter(Count>0)
+
+#Change count to integer
+data_deltasmelt$Count<-as.integer(data_deltasmelt$Count)
+
+#Create long form, remove data prior to 1994
+data_deltasmelt_long <-data_deltasmelt[rep(1:nrow(data_deltasmelt), data_deltasmelt$Count),] %>% mutate(Count=1) %>% filter(year(Date)>=1994)
+
+
+```
+
+## Size cutoffs used for Delta Smelt
+
+Larvae: (<20mm FL)
+
+Juvenile: (20-58mm FL)
+
+Adult: (>58mm FL)
+
+### Brood year cutoff for the life stages
+
+Larvae: brood year = calendar year
+
+Juvenile: brood year starts in March 1st of current year to February 28th or 29th of the following year
+
+Adult: brood year starts in June 1st of current year to May 31st of the following year
+
+```{r}
+
+col_order <- c("broodyear", "0.0%", "5.0%",
+               "10.0%", "90.0%","95.0%","100.0%")
+
+data_deltasmelt_adult<-data_deltasmelt_long %>% filter(Length>=55) %>% mutate(broodyear=ifelse(month(Date)>=6,year(Date),year(Date)-1))
+
+data_deltasmelt_adult_sum<-data_deltasmelt_adult %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_deltasmelt_adult_sum$date<-format(data_deltasmelt_adult_sum$date, format="%B %d %Y")
+
+data_deltasmelt_adult_sum<-spread(data_deltasmelt_adult_sum,quantile,date)
+
+data_deltasmelt_adult_sum <- data_deltasmelt_sum[, col_order]
+
+data_deltasmelt_adult_sum <- left_join(data_deltasmelt_adult_sum,data_deltasmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+
+
+data_deltasmelt_adult_sum
+```
+
