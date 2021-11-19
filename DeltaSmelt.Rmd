@@ -1,7 +1,7 @@
 ---
 title: "Delta Smelt Occurrence by Life Stage"
 author: "Brian Mahardja"
-date: "11/16/2021"
+date: "11/19/2021"
 output: html_document
 knit: (function(input, ...) {
     rmarkdown::render(
@@ -22,7 +22,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(LTMRdata)
 library(tidyverse)
 library(lubridate)
-library(knitr)
 ```
 
 ## Load and process Delta Smelt data
@@ -102,15 +101,15 @@ data_deltasmelt_adult_sum<-spread(data_deltasmelt_adult_sum,quantile,date)
 
 data_deltasmelt_adult_sum <- data_deltasmelt_adult_sum[, col_order]
 
-data_deltasmelt_adult_sum <- left_join(data_deltasmelt_adult_sum,data_deltasmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+data_deltasmelt_adult_sum <- left_join(data_deltasmelt_adult_sum,data_deltasmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count))) %>% filter(broodyear>=1994)
 
-kable(data_deltasmelt_adult_sum,col.names = c("Cohort Year","0.0%",
+knitr::kable(data_deltasmelt_adult_sum,col.names = c("Cohort Year","0.0%",
                                               "5.0%","10.0%", "90.0%",
                                               "95.0%","100.0%","Sample size"))
 
 ```
 
-Note that adult Delta Smelt can linger for more than a year (i.e, 1+ year old Delta Smelt). 2-year old Delta Smelt have even been observed in the past. This is why the first adult smelt can sometimes show up in June or July in the table. This phenomenon of 1+ year old Delta Smelt were more common in the 1990s before the Pelagic Organism Decline.
+Note that adult Delta Smelt can linger for more than a year (i.e, 1+ year old Delta Smelt). 2-year old Delta Smelt have even been observed in the past. This is why the first adult smelt can sometimes show up in June or July in the table. This phenomenon of 1+ year old Delta Smelt appear to be more common in the 1990s (or whenever smelt were more abundant). Example below:
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -120,10 +119,8 @@ ggplot(data_deltasmelt_long %>% filter(year(Date)==1994), aes(x=Date, y=Length))
 ggplot(data_deltasmelt_long %>% filter(year(Date)==1998), aes(x=Date, y=Length)) + theme_bw() +
   geom_point(size=1, shape=16,alpha=0.2) + labs(title="1998 Delta Smelt FL Distribution",x="Date")
 
-ggplot(data_deltasmelt_long %>% filter(year(Date)==2012), aes(x=Date, y=Length)) + theme_bw() +
-  geom_point(size=1, shape=16,alpha=0.2) + labs(title="2012 Delta Smelt FL Distribution",x="Date")
-
 ```
+
 
 ## Juvenile Delta Smelt 
 
@@ -144,9 +141,9 @@ data_deltasmelt_juvenile_sum<-spread(data_deltasmelt_juvenile_sum,quantile,date)
 
 data_deltasmelt_juvenile_sum <- data_deltasmelt_juvenile_sum[, col_order]
 
-data_deltasmelt_juvenile_sum <- left_join(data_deltasmelt_juvenile_sum,data_deltasmelt_juvenile %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+data_deltasmelt_juvenile_sum <- left_join(data_deltasmelt_juvenile_sum,data_deltasmelt_juvenile %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))%>% filter(broodyear>=1994)
 
-kable(data_deltasmelt_juvenile_sum,col.names = c("Cohort Year","0.0%",
+knitr::kable(data_deltasmelt_juvenile_sum,col.names = c("Cohort Year","0.0%",
                                               "5.0%","10.0%", "90.0%",
                                               "95.0%","100.0%","Sample size"))
 
@@ -172,10 +169,9 @@ data_deltasmelt_larvae_sum <- data_deltasmelt_larvae_sum[, col_order]
 
 data_deltasmelt_larvae_sum <- left_join(data_deltasmelt_larvae_sum,data_deltasmelt_larvae %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
 
-kable(data_deltasmelt_larvae_sum,col.names = c("Cohort Year","0.0%",
+knitr::kable(data_deltasmelt_larvae_sum,col.names = c("Cohort Year","0.0%",
                                               "5.0%","10.0%", "90.0%",
                                               "95.0%","100.0%","Sample size"))
 
 ```
-
 
