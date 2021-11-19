@@ -84,12 +84,13 @@ Adult: brood year starts in June 1st of current year to May 31st of the followin
 
 (>58 mm FL, cohort year set to June 1st - May 31st)
 
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
 col_order <- c("broodyear", "0.0%", "5.0%",
                "10.0%", "90.0%","95.0%","100.0%")
 
-data_deltasmelt_adult<-data_deltasmelt_long %>% filter(Length>=55) %>% mutate(broodyear=ifelse(month(Date)>=6,year(Date),year(Date)-1))
+data_deltasmelt_adult<-data_deltasmelt_long %>% filter(Length>58) %>% mutate(broodyear=ifelse(month(Date)>=6,year(Date),year(Date)-1))
 
 data_deltasmelt_adult_sum<-data_deltasmelt_adult %>% group_by(broodyear) %>%  
   summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
@@ -108,4 +109,73 @@ kable(data_deltasmelt_adult_sum,col.names = c("Cohort Year","0.0%",
                                               "95.0%","100.0%","Sample size"))
 
 ```
+
+Note that adult Delta Smelt can linger for more than a year (i.e, 1+ year old Delta Smelt). 2-year old Delta Smelt have even been observed in the past. This is why the first adult smelt can sometimes show up in June or July in the table. This phenomenon of 1+ year old Delta Smelt were more common in the 1990s before the Pelagic Organism Decline.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(data_deltasmelt_long %>% filter(year(Date)==1994), aes(x=Date, y=Length)) + theme_bw() +
+  geom_point(size=1, shape=16,alpha=0.2) + labs(title="1994 Delta Smelt FL Distribution",x="Date")
+
+ggplot(data_deltasmelt_long %>% filter(year(Date)==1998), aes(x=Date, y=Length)) + theme_bw() +
+  geom_point(size=1, shape=16,alpha=0.2) + labs(title="1998 Delta Smelt FL Distribution",x="Date")
+
+ggplot(data_deltasmelt_long %>% filter(year(Date)==2012), aes(x=Date, y=Length)) + theme_bw() +
+  geom_point(size=1, shape=16,alpha=0.2) + labs(title="2012 Delta Smelt FL Distribution",x="Date")
+
+```
+
+## Juvenile Delta Smelt 
+
+(20-58 mm FL, cohort year set to March 1st - February 28th/29th)
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_deltasmelt_juvenile<-data_deltasmelt_long %>% filter(Length<=58&Length>=20) %>% mutate(broodyear=ifelse(month(Date)>=3,year(Date),year(Date)-1))
+
+data_deltasmelt_juvenile_sum<-data_deltasmelt_juvenile %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_deltasmelt_juvenile_sum$date<-format(data_deltasmelt_juvenile_sum$date, format="%B %d %Y")
+
+data_deltasmelt_juvenile_sum<-spread(data_deltasmelt_juvenile_sum,quantile,date)
+
+data_deltasmelt_juvenile_sum <- data_deltasmelt_juvenile_sum[, col_order]
+
+data_deltasmelt_juvenile_sum <- left_join(data_deltasmelt_juvenile_sum,data_deltasmelt_juvenile %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+
+kable(data_deltasmelt_juvenile_sum,col.names = c("Cohort Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+## Larval Delta Smelt 
+
+(<20 mm FL, cohort year set to just calendar year)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_deltasmelt_larvae<-data_deltasmelt_long %>% filter(Length<=20) %>% mutate(broodyear=year(Date))
+
+data_deltasmelt_larvae_sum<-data_deltasmelt_larvae %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_deltasmelt_larvae_sum$date<-format(data_deltasmelt_larvae_sum$date, format="%B %d %Y")
+
+data_deltasmelt_larvae_sum<-spread(data_deltasmelt_larvae_sum,quantile,date)
+
+data_deltasmelt_larvae_sum <- data_deltasmelt_larvae_sum[, col_order]
+
+data_deltasmelt_larvae_sum <- left_join(data_deltasmelt_larvae_sum,data_deltasmelt_larvae %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+
+kable(data_deltasmelt_larvae_sum,col.names = c("Cohort Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
 
