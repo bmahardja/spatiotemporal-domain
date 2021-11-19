@@ -3,6 +3,13 @@ title: "Delta Smelt Occurrence by Life Stage"
 author: "Brian Mahardja"
 date: "11/16/2021"
 output: html_document
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input,
+      output_dir = 'docs',
+      envir = globalenv()
+    )
+  })
 ---
 
 ```{r setup, include=FALSE}
@@ -15,6 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(LTMRdata)
 library(tidyverse)
 library(lubridate)
+library(knitr)
 ```
 
 ## Load and process Delta Smelt data
@@ -72,7 +80,11 @@ Juvenile: brood year starts in March 1st of current year to February 28th or 29t
 
 Adult: brood year starts in June 1st of current year to May 31st of the following year
 
-```{r}
+## Adult Delta Smelt 
+
+(>58 mm FL, cohort year set to June 1st - May 31st)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
 col_order <- c("broodyear", "0.0%", "5.0%",
                "10.0%", "90.0%","95.0%","100.0%")
@@ -87,11 +99,13 @@ data_deltasmelt_adult_sum$date<-format(data_deltasmelt_adult_sum$date, format="%
 
 data_deltasmelt_adult_sum<-spread(data_deltasmelt_adult_sum,quantile,date)
 
-data_deltasmelt_adult_sum <- data_deltasmelt_sum[, col_order]
+data_deltasmelt_adult_sum <- data_deltasmelt_adult_sum[, col_order]
 
 data_deltasmelt_adult_sum <- left_join(data_deltasmelt_adult_sum,data_deltasmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
 
+kable(data_deltasmelt_adult_sum,col.names = c("Cohort Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
 
-data_deltasmelt_adult_sum
 ```
 
