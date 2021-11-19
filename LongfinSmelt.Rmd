@@ -1,0 +1,184 @@
+---
+title: "Longfin Smelt Occurrence by Life Stage"
+author: "Brian Mahardja"
+date: "11/19/2021"
+output: html_document
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input,
+      output_dir = 'docs',
+      envir = globalenv()
+    )
+  })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#devtools::install_github("sbashevkin/LTMRdata")
+
+library(LTMRdata)
+library(tidyverse)
+library(lubridate)
+```
+
+
+## Load and process Longfin Smelt data
+
+Grab Longfin Smelt data from the integrated fish dataset (LTMRdata package by Sam Bashevkin et al.) and produce one fish data per row. I will exclude fish with no length measurement. Note that unmeasured fish that were collected alongside measured fish were converted to have fish length per LTMRdata documentation. I converted count to integer however, since the process that Sam implemented created decimal points for counts.
+
+Surveys included in this calculation:
+
+1. San Francisco Bay Study
+
+2. Suisun Marsh Study
+
+3. Fall Midwater Trawl
+
+4. Spring Kodiak Trawl
+
+5. Delta Juvenile Fish Monitoring Program
+
+6. Enhanced Delta Smelt Monitoring
+
+7. 20-mm Survey
+
+8. Smelt Larval Survey
+
+9. Summer Townet Survey
+
+```{r data, echo=TRUE, message=FALSE, warning=FALSE}
+
+#Load data
+data_longfinsmelt <-LTMRdata::fish(sources=c("Baystudy", "Suisun", "FMWT", "SKT", "DJFMP", "EDSM", "TMM", "SLS","STN"),species="Spirinchus thaleichthys", size_cutoff=NULL,remove_unknown_lengths=TRUE) %>%
+  filter(Count>0)
+
+#Change count to integer
+data_longfinsmelt$Count<-as.integer(data_longfinsmelt$Count)
+
+#Create long form, remove data prior to 1994
+data_longfinsmelt_long <-data_longfinsmelt[rep(1:nrow(data_longfinsmelt), data_longfinsmelt$Count),] %>% mutate(Count=1) %>% filter(year(Date)>=1994)
+
+```
+
+
+## Size cutoffs used for Longfin Smelt
+
+Larvae: (<20mm FL)
+
+Juvenile: (20-84mm FL)
+
+Adult: (>84mm FL)
+
+### Brood year cutoff for the life stages
+
+Larvae: brood year = calendar year
+
+Juvenile: brood year = calendar year
+
+Adult: brood year starts in July 1st of current year to June 30th of the following year
+
+# Overview of size distribution
+
+Subadult and adult Longfin Smelt typically are present and caught from January to July, and then again starting October to November.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(data_longfinsmelt_long %>% filter(year(Date)==2017), aes(x=Date, y=Length)) + theme_bw() +
+  geom_point(size=1, shape=16,alpha=0.2) + labs(title="2017 Longfin Smelt FL Distribution",x="Date")
+
+ggplot(data_longfinsmelt_long %>% filter(year(Date)==2018), aes(x=Date, y=Length)) + theme_bw() +
+  geom_point(size=1, shape=16,alpha=0.2) + labs(title="2018 Longfin Smelt FL Distribution",x="Date")
+
+ggplot(data_longfinsmelt_long %>% filter(year(Date)==2019), aes(x=Date, y=Length)) + theme_bw() +
+  geom_point(size=1, shape=16,alpha=0.2) + labs(title="2019 Longfin Smelt FL Distribution",x="Date")
+
+
+```
+
+## Adult Longfin Smelt 
+
+(mature and immature adults of >84 mm FL, cohort year set to July 1st - June 30th)
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+col_order <- c("broodyear", "0.0%", "5.0%",
+               "10.0%", "90.0%","95.0%","100.0%")
+
+data_longfinsmelt_adult<-data_longfinsmelt_long %>% filter(Length>84) %>% mutate(broodyear=ifelse(month(Date)>=7,year(Date),year(Date)-1))
+
+data_longfinsmelt_adult_sum<-data_longfinsmelt_adult %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_adult_sum$date<-format(data_longfinsmelt_adult_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_adult_sum<-spread(data_longfinsmelt_adult_sum,quantile,date)
+
+data_longfinsmelt_adult_sum <- data_longfinsmelt_adult_sum[, col_order]
+
+data_longfinsmelt_adult_sum <- left_join(data_longfinsmelt_adult_sum,data_longfinsmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count))) %>% filter(broodyear>=1994&broodyear<2021)
+
+knitr::kable(data_longfinsmelt_adult_sum,col.names = c("'Cohort' Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+## Juvenile Longfin Smelt 
+
+(20-84 mm FL, cohort year set to January 1st - December 31st; same as calendar year)
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_juvenile<-data_longfinsmelt_long %>% filter(Length<=84&Length>=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_juvenile_sum<-data_longfinsmelt_juvenile %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_juvenile_sum$date<-format(data_longfinsmelt_juvenile_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_juvenile_sum<-spread(data_longfinsmelt_juvenile_sum,quantile,date)
+
+data_longfinsmelt_juvenile_sum <- data_longfinsmelt_juvenile_sum[, col_order]
+
+data_longfinsmelt_juvenile_sum <- left_join(data_longfinsmelt_juvenile_sum,data_longfinsmelt_juvenile %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))%>% filter(broodyear>=1994)
+
+knitr::kable(data_longfinsmelt_juvenile_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+
+## Larval Delta Smelt 
+
+(<20 mm FL, cohort year set to just calendar year)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_larvae<-data_longfinsmelt_long %>% filter(Length<=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_larvae_sum<-data_longfinsmelt_larvae %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_larvae_sum$date<-format(data_longfinsmelt_larvae_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_larvae_sum<-spread(data_longfinsmelt_larvae_sum,quantile,date)
+
+data_longfinsmelt_larvae_sum <- data_longfinsmelt_larvae_sum[, col_order]
+
+data_longfinsmelt_larvae_sum <- left_join(data_longfinsmelt_larvae_sum,data_longfinsmelt_larvae %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+
+knitr::kable(data_longfinsmelt_larvae_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
