@@ -156,7 +156,7 @@ knitr::kable(data_longfinsmelt_juvenile_sum,col.names = c("Calendar Year","0.0%"
 ```
 
 
-## Larval Delta Smelt 
+## Larval Longfin Smelt 
 
 (<20 mm FL, cohort year set to just calendar year)
 
@@ -182,3 +182,32 @@ knitr::kable(data_longfinsmelt_larvae_sum,col.names = c("Calendar Year","0.0%",
 
 ```
 
+## Adult Longfin Smelt Migration into the Delta
+
+Per conversation with Trinh Nguyen, who is working on a Longfin Smelt migration window model using Chipps Island Trawl data with Jim Hobbs and Michael Eakin, 2+ year old Longfin Smelt catch are defined as "spawning adults" moving into the Delta.
+
+Size cut-off for their study was >=98 mm FL. 
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_migration<-data_longfinsmelt_long %>% filter(Length>=98, Source=="DJFMP", grepl("SB", Station), Method=="Midwater trawl") %>% mutate(broodyear=ifelse(month(Date)<10,year(Date),year(Date)+1))
+
+
+data_longfinsmelt_migration_sum<-data_longfinsmelt_migration %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_migration_sum$date<-format(data_longfinsmelt_migration_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_migration_sum<-spread(data_longfinsmelt_migration_sum,quantile,date)
+
+data_longfinsmelt_migration_sum <- data_longfinsmelt_migration_sum[, col_order]
+
+data_longfinsmelt_migration_sum <- left_join(data_longfinsmelt_migration_sum,data_longfinsmelt_migration %>% group_by(broodyear) %>% summarise(sample_size=sum(Count))) %>% filter(broodyear>1994)
+
+knitr::kable(data_longfinsmelt_migration_sum,col.names = c("Water Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
