@@ -18,10 +18,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #devtools::install_github("sbashevkin/LTMRdata")
+#devtools::install_github("InteragencyEcologicalProgram/deltamapr")
 
 library(LTMRdata)
+library(deltamapr)
 library(tidyverse)
 library(lubridate)
+library(sf)
 ```
 
 
@@ -62,7 +65,23 @@ data_longfinsmelt$Count<-as.integer(data_longfinsmelt$Count)
 data_longfinsmelt_long <-data_longfinsmelt[rep(1:nrow(data_longfinsmelt), data_longfinsmelt$Count),] %>% mutate(Count=1) %>% filter(year(Date)>=1994)
 
 ```
+## Regions used to understand spatial distribution
 
+Shown below are the regional cutoffs used to better understand when fish are found in a particular area within the estuary
+
+```{r map, echo=FALSE, message=FALSE, warning=FALSE}
+custom_region <-R_EDSM_Subregions_Mahardja %>% mutate(CustomRegion = case_when(
+  SubRegion %in% c("South Bay","San Francisco Bay","San Pablo Bay") ~ "Bays",
+  Region %in% c("North","South")|SubRegion %in% c("Lower Sacramento River","Lower San Joaquin River") ~ "Delta",
+  TRUE ~ "Suisun Bay and Marsh"))
+
+
+ggplot()+
+  geom_sf(data=WW_Delta,fill="grey")+
+  geom_sf(data=custom_region,aes(color=CustomRegion,fill=CustomRegion),alpha=0.4)+
+  theme_bw()+ theme(legend.title = element_blank())
+
+```
 
 ## Size cutoffs used for Longfin Smelt
 
@@ -97,6 +116,9 @@ ggplot(data_longfinsmelt_long %>% filter(year(Date)==2019), aes(x=Date, y=Length
 
 
 ```
+
+
+### San Francisco Bay-Delta (all regions)
 
 ## Adult Longfin Smelt 
 
@@ -182,7 +204,187 @@ knitr::kable(data_longfinsmelt_larvae_sum,col.names = c("Calendar Year","0.0%",
 
 ```
 
-## Adult Longfin Smelt Migration into the Delta
+### Bays (South Bay, San Francisco Bay, San Pablo Bay)
+
+## Adult Longfin Smelt 
+
+(mature and immature adults of >84 mm FL, cohort year set to July 1st - June 30th)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_long_spatial<- data_longfinsmelt_long %>% filter(!is.na(Latitude)&!is.na(Longitude)) %>% 
+  st_as_sf(coords=c("Longitude", "Latitude"),crs=st_crs(WW_Delta))
+
+data_longfinsmelt_bays <- data_longfinsmelt_long_spatial %>% st_filter(custom_region %>% st_transform(crs=st_crs(WW_Delta)) %>%
+                                                                         filter(CustomRegion=="Bays")) 
+
+st_geometry(data_longfinsmelt_bays) <- NULL # remove geometry, coerce to data.frame
+
+data_longfinsmelt_adult <- data_longfinsmelt_bays %>% filter(Length>84) %>% mutate(broodyear=ifelse(month(Date)>=7,year(Date),year(Date)-1))
+
+data_longfinsmelt_adult_sum<-data_longfinsmelt_adult %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_adult_sum$date<-format(data_longfinsmelt_adult_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_adult_sum<-spread(data_longfinsmelt_adult_sum,quantile,date)
+
+data_longfinsmelt_adult_sum <- data_longfinsmelt_adult_sum[, col_order]
+
+data_longfinsmelt_adult_sum <- left_join(data_longfinsmelt_adult_sum,data_longfinsmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count))) %>% filter(broodyear>=1994&broodyear<2021)
+
+knitr::kable(data_longfinsmelt_adult_sum,col.names = c("'Cohort' Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+```
+
+
+## Juvenile Longfin Smelt 
+
+(20-84 mm FL, cohort year set to January 1st - December 31st; same as calendar year)
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_juvenile<-data_longfinsmelt_bays %>% filter(Length<=84&Length>=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_juvenile_sum<-data_longfinsmelt_juvenile %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_juvenile_sum$date<-format(data_longfinsmelt_juvenile_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_juvenile_sum<-spread(data_longfinsmelt_juvenile_sum,quantile,date)
+
+data_longfinsmelt_juvenile_sum <- data_longfinsmelt_juvenile_sum[, col_order]
+
+data_longfinsmelt_juvenile_sum <- left_join(data_longfinsmelt_juvenile_sum,data_longfinsmelt_juvenile %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))%>% filter(broodyear>=1994)
+
+knitr::kable(data_longfinsmelt_juvenile_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+
+## Larval Longfin Smelt 
+
+(<20 mm FL, cohort year set to just calendar year)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_larvae<-data_longfinsmelt_bays %>% filter(Length<=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_larvae_sum<-data_longfinsmelt_larvae %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_larvae_sum$date<-format(data_longfinsmelt_larvae_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_larvae_sum<-spread(data_longfinsmelt_larvae_sum,quantile,date)
+
+data_longfinsmelt_larvae_sum <- data_longfinsmelt_larvae_sum[, col_order]
+
+data_longfinsmelt_larvae_sum <- left_join(data_longfinsmelt_larvae_sum,data_longfinsmelt_larvae %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+
+knitr::kable(data_longfinsmelt_larvae_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+### Suisun Bay and Suisun Marsh 
+
+## Adult Longfin Smelt 
+
+(mature and immature adults of >84 mm FL, cohort year set to July 1st - June 30th)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_suisun <- data_longfinsmelt_long_spatial %>% st_filter(custom_region %>% st_transform(crs=st_crs(WW_Delta)) %>%
+                                                                         filter(CustomRegion=="Suisun Bay and Marsh")) 
+
+st_geometry(data_longfinsmelt_suisun) <- NULL # remove geometry, coerce to data.frame
+
+data_longfinsmelt_adult <- data_longfinsmelt_suisun %>% filter(Length>84) %>% mutate(broodyear=ifelse(month(Date)>=7,year(Date),year(Date)-1))
+
+data_longfinsmelt_adult_sum<-data_longfinsmelt_adult %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_adult_sum$date<-format(data_longfinsmelt_adult_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_adult_sum<-spread(data_longfinsmelt_adult_sum,quantile,date)
+
+data_longfinsmelt_adult_sum <- data_longfinsmelt_adult_sum[, col_order]
+
+data_longfinsmelt_adult_sum <- left_join(data_longfinsmelt_adult_sum,data_longfinsmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count))) %>% filter(broodyear>=1994&broodyear<2021)
+
+knitr::kable(data_longfinsmelt_adult_sum,col.names = c("'Cohort' Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+```
+
+
+## Juvenile Longfin Smelt 
+
+(20-84 mm FL, cohort year set to January 1st - December 31st; same as calendar year)
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_juvenile<-data_longfinsmelt_suisun %>% filter(Length<=84&Length>=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_juvenile_sum<-data_longfinsmelt_juvenile %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_juvenile_sum$date<-format(data_longfinsmelt_juvenile_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_juvenile_sum<-spread(data_longfinsmelt_juvenile_sum,quantile,date)
+
+data_longfinsmelt_juvenile_sum <- data_longfinsmelt_juvenile_sum[, col_order]
+
+data_longfinsmelt_juvenile_sum <- left_join(data_longfinsmelt_juvenile_sum,data_longfinsmelt_juvenile %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))%>% filter(broodyear>=1994)
+
+knitr::kable(data_longfinsmelt_juvenile_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+
+## Larval Longfin Smelt 
+
+(<20 mm FL, cohort year set to just calendar year)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_larvae<-data_longfinsmelt_suisun %>% filter(Length<=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_larvae_sum<-data_longfinsmelt_larvae %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_larvae_sum$date<-format(data_longfinsmelt_larvae_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_larvae_sum<-spread(data_longfinsmelt_larvae_sum,quantile,date)
+
+data_longfinsmelt_larvae_sum <- data_longfinsmelt_larvae_sum[, col_order]
+
+data_longfinsmelt_larvae_sum <- left_join(data_longfinsmelt_larvae_sum,data_longfinsmelt_larvae %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+
+knitr::kable(data_longfinsmelt_larvae_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+
+### Sacramento and San-Joaquin Delta
+
+## Timing of Adult Longfin Smelt Migration into the Delta
 
 Per conversation with Trinh Nguyen, who is working on a Longfin Smelt migration window model using Chipps Island Trawl data with Jim Hobbs and Michael Eakin, 2+ year old Longfin Smelt catch are defined as "spawning adults" moving into the Delta.
 
@@ -211,3 +413,90 @@ knitr::kable(data_longfinsmelt_migration_sum,col.names = c("Water Year","0.0%",
                                               "95.0%","100.0%","Sample size"))
 
 ```
+
+
+## Adult Longfin Smelt 
+
+(mature and immature adults of >84 mm FL, cohort year set to July 1st - June 30th)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_delta <- data_longfinsmelt_long_spatial %>% st_filter(custom_region %>% st_transform(crs=st_crs(WW_Delta)) %>%
+                                                                         filter(CustomRegion=="Delta")) 
+
+st_geometry(data_longfinsmelt_delta) <- NULL # remove geometry, coerce to data.frame
+
+data_longfinsmelt_adult <- data_longfinsmelt_delta %>% filter(Length>84) %>% mutate(broodyear=ifelse(month(Date)>=7,year(Date),year(Date)-1))
+
+data_longfinsmelt_adult_sum<-data_longfinsmelt_adult %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_adult_sum$date<-format(data_longfinsmelt_adult_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_adult_sum<-spread(data_longfinsmelt_adult_sum,quantile,date)
+
+data_longfinsmelt_adult_sum <- data_longfinsmelt_adult_sum[, col_order]
+
+data_longfinsmelt_adult_sum <- left_join(data_longfinsmelt_adult_sum,data_longfinsmelt_adult %>% group_by(broodyear) %>% summarise(sample_size=sum(Count))) %>% filter(broodyear>=1994&broodyear<2021)
+
+knitr::kable(data_longfinsmelt_adult_sum,col.names = c("'Cohort' Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+```
+
+
+## Juvenile Longfin Smelt 
+
+(20-84 mm FL, cohort year set to January 1st - December 31st; same as calendar year)
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_juvenile<-data_longfinsmelt_delta %>% filter(Length<=84&Length>=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_juvenile_sum<-data_longfinsmelt_juvenile %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_juvenile_sum$date<-format(data_longfinsmelt_juvenile_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_juvenile_sum<-spread(data_longfinsmelt_juvenile_sum,quantile,date)
+
+data_longfinsmelt_juvenile_sum <- data_longfinsmelt_juvenile_sum[, col_order]
+
+data_longfinsmelt_juvenile_sum <- left_join(data_longfinsmelt_juvenile_sum,data_longfinsmelt_juvenile %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))%>% filter(broodyear>=1994)
+
+knitr::kable(data_longfinsmelt_juvenile_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
+
+## Larval Longfin Smelt 
+
+(<20 mm FL, cohort year set to just calendar year)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+data_longfinsmelt_larvae<-data_longfinsmelt_delta %>% filter(Length<=20) %>% mutate(broodyear=year(Date))
+
+data_longfinsmelt_larvae_sum<-data_longfinsmelt_larvae %>% group_by(broodyear) %>%  
+  summarise(quantile = scales::percent(c(0, 0.05, 0.1, 0.9, 0.95, 1.0)),
+            date = quantile(Date, c(0, 0.05, 0.1, 0.9, 0.95, 1.0), type=1)) 
+
+data_longfinsmelt_larvae_sum$date<-format(data_longfinsmelt_larvae_sum$date, format="%B %d %Y")
+
+data_longfinsmelt_larvae_sum<-spread(data_longfinsmelt_larvae_sum,quantile,date)
+
+data_longfinsmelt_larvae_sum <- data_longfinsmelt_larvae_sum[, col_order]
+
+data_longfinsmelt_larvae_sum <- left_join(data_longfinsmelt_larvae_sum,data_longfinsmelt_larvae %>% group_by(broodyear) %>% summarise(sample_size=sum(Count)))
+
+knitr::kable(data_longfinsmelt_larvae_sum,col.names = c("Calendar Year","0.0%",
+                                              "5.0%","10.0%", "90.0%",
+                                              "95.0%","100.0%","Sample size"))
+
+```
+
