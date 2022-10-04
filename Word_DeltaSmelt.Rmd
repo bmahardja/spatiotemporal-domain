@@ -49,20 +49,20 @@ Surveys included in this calculation:
 9. Summer Townet Survey
 
 ```{r data, echo=TRUE, message=FALSE, warning=FALSE}
-
 #Load data
-data_deltasmelt <-LTMRdata::fish(sources=c("Baystudy", "Suisun", "FMWT", "SKT", "DJFMP", "EDSM", "TMM", "SLS","STN"),species="Hypomesus transpacificus", size_cutoff=NULL,remove_unknown_lengths=TRUE) %>%
-  filter(Count>0)
+data_deltasmelt <-LTMRdata::fish(sources=c("Baystudy", "Suisun", "FMWT", "SKT", "DJFMP", "EDSM", "TMM", "SLS","STN"),species="Hypomesus transpacificus", size_cutoff=NULL,remove_unknown_lengths=TRUE) %>% filter(year(Date)>=1994)
+
+#Create time series summary
+data_deltasmelt_time_summary<-data_deltasmelt %>% group_by(Source) %>% summarise(StartDate=min(Date),EndDate=max(Date))
+data_deltasmelt_time_summary
 
 #Change count to integer
 data_deltasmelt$Count<-as.integer(data_deltasmelt$Count)
+#Remove zero catch data
+data_deltasmelt<- data_deltasmelt%>% filter(Count>0)
 
 #Create long form, remove data prior to 1994
-data_deltasmelt_long <-data_deltasmelt[rep(1:nrow(data_deltasmelt), data_deltasmelt$Count),] %>% mutate(Count=1) %>% filter(year(Date)>=1994)
-
-#Create time series summary
-data_deltasmelt_time_summary<-data_deltasmelt_long %>% group_by(Source) %>% summarise(StartDate=min(Date),EndDate=max(Date))
-data_deltasmelt_time_summary
+data_deltasmelt_long <-data_deltasmelt[rep(1:nrow(data_deltasmelt), data_deltasmelt$Count),] %>% mutate(Count=1)
 ```
 
 ## Size cutoffs used for Delta Smelt
