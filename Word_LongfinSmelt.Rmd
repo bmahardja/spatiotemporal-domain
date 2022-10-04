@@ -64,6 +64,9 @@ data_longfinsmelt$Count<-as.integer(data_longfinsmelt$Count)
 #Create long form, remove data prior to 1994
 data_longfinsmelt_long <-data_longfinsmelt[rep(1:nrow(data_longfinsmelt), data_longfinsmelt$Count),] %>% mutate(Count=1) %>% filter(year(Date)>=1994)
 
+#Create time series summary
+data_longfinsmelt_time_summary<-data_longfinsmelt_long %>% group_by(Source) %>% summarise(StartDate=min(Date),EndDate=max(Date))
+data_longfinsmelt_time_summary
 ```
 
 ## Size cutoffs used for Longfin Smelt

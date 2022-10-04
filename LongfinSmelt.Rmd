@@ -56,13 +56,19 @@ Surveys included in this calculation:
 
 #Load data
 data_longfinsmelt <-LTMRdata::fish(sources=c("Baystudy", "Suisun", "FMWT", "SKT", "DJFMP", "EDSM", "TMM", "SLS","STN"),species="Spirinchus thaleichthys", size_cutoff=NULL,remove_unknown_lengths=TRUE) %>%
-  filter(Count>0)
+  filter(year(Date)>=1994)
+
+#Create time series summary
+data_longfinsmelt_time_summary<-data_longfinsmelt %>% group_by(Source) %>% summarise(StartDate=min(Date),EndDate=max(Date))
+data_longfinsmelt_time_summary
 
 #Change count to integer
 data_longfinsmelt$Count<-as.integer(data_longfinsmelt$Count)
+#Remove zero catch data
+data_longfinsmelt<- data_longfinsmelt%>% filter(Count>0)
 
 #Create long form, remove data prior to 1994
-data_longfinsmelt_long <-data_longfinsmelt[rep(1:nrow(data_longfinsmelt), data_longfinsmelt$Count),] %>% mutate(Count=1) %>% filter(year(Date)>=1994)
+data_longfinsmelt_long <-data_longfinsmelt[rep(1:nrow(data_longfinsmelt), data_longfinsmelt$Count),] %>% mutate(Count=1) 
 
 ```
 ## Regions used to understand spatial distribution

@@ -60,7 +60,9 @@ data_deltasmelt$Count<-as.integer(data_deltasmelt$Count)
 #Create long form, remove data prior to 1994
 data_deltasmelt_long <-data_deltasmelt[rep(1:nrow(data_deltasmelt), data_deltasmelt$Count),] %>% mutate(Count=1) %>% filter(year(Date)>=1994)
 
-
+#Create time series summary
+data_deltasmelt_time_summary<-data_deltasmelt_long %>% group_by(Source) %>% summarise(StartDate=min(Date),EndDate=max(Date))
+data_deltasmelt_time_summary
 ```
 
 ## Size cutoffs used for Delta Smelt
