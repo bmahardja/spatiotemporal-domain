@@ -404,8 +404,7 @@ fish_deltasmelt &lt;- fish %&gt;%
 # do a join and collect the resulting data frame
 # collect executes the sql query and gives you a table
 data_deltasmelt&lt;-left_join(surv, fish_deltasmelt) %&gt;% 
-  collect() %&gt;% #Remove 0 counts, only use years 1994 and after, only ones with non-zero lengths
-  filter(Count&gt;0) %&gt;% filter(year(Date)&gt;=1994) %&gt;% filter(!is.na(Length))
+  collect() 
 
 
 #Create time series summary
@@ -414,16 +413,20 @@ data_deltasmelt_time_summary</code></pre>
 <pre><code>## # A tibble: 9 x 3
 ##   Source    StartDate  EndDate   
 ##   &lt;chr&gt;     &lt;date&gt;     &lt;date&gt;    
-## 1 20mm      1995-04-27 2021-05-06
-## 2 Bay Study 1994-02-02 2017-02-08
-## 3 DJFMP     1994-01-03 2019-11-06
-## 4 EDSM      2016-12-15 2021-01-26
-## 5 FMWT      1994-01-10 2017-10-10
-## 6 SKT       2002-01-07 2020-02-12
-## 7 SLS       2009-01-23 2020-03-18
-## 8 STN       1994-06-15 2019-06-28
-## 9 Suisun    1994-01-06 2015-12-16</code></pre>
-<pre class="r"><code>#Change count to integer
+## 1 20mm      1995-04-24 2021-07-16
+## 2 Bay Study 1980-01-23 2020-12-01
+## 3 DJFMP     1976-03-08 2020-12-31
+## 4 EDSM      2016-12-15 2021-03-25
+## 5 FMWT      1967-09-13 2020-12-15
+## 6 SKT       2002-01-07 2021-04-29
+## 7 SLS       2009-01-05 2021-03-17
+## 8 STN       1959-06-14 2021-08-19
+## 9 Suisun    1979-05-16 2021-09-23</code></pre>
+<pre class="r"><code>#Remove 0 counts, only use years 1994 and after, only ones with non-zero lengths
+data_deltasmelt &lt;- data_deltasmelt %&gt;% 
+  filter(Count&gt;0) %&gt;% filter(year(Date)&gt;=1994) %&gt;% filter(!is.na(Length))
+
+#Change count to integer
 data_deltasmelt$Count&lt;-as.integer(data_deltasmelt$Count)
 #Remove zero catch data
 data_deltasmelt&lt;- data_deltasmelt%&gt;% filter(Count&gt;0)

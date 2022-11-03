@@ -66,13 +66,16 @@ fish_deltasmelt <- fish %>%
 # do a join and collect the resulting data frame
 # collect executes the sql query and gives you a table
 data_deltasmelt<-left_join(surv, fish_deltasmelt) %>% 
-  collect() %>% #Remove 0 counts, only use years 1994 and after, only ones with non-zero lengths
-  filter(Count>0) %>% filter(year(Date)>=1994) %>% filter(!is.na(Length))
+  collect() 
 
 
 #Create time series summary
 data_deltasmelt_time_summary<-data_deltasmelt %>% group_by(Source) %>% summarise(StartDate=min(Date),EndDate=max(Date))
 data_deltasmelt_time_summary
+
+#Remove 0 counts, only use years 1994 and after, only ones with non-zero lengths
+data_deltasmelt <- data_deltasmelt %>% 
+  filter(Count>0) %>% filter(year(Date)>=1994) %>% filter(!is.na(Length))
 
 #Change count to integer
 data_deltasmelt$Count<-as.integer(data_deltasmelt$Count)
